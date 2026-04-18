@@ -2,12 +2,60 @@
 
 ## Overview
 
-**FlightRadarATC** is a personal iPhone PWA that replicates the core experience of the ATC Live Air Traffic Radio app (App Store id6755132266) for free. The two core features are:
+**FlightRadarATC** is a personal iPhone PWA centered on KBOS (Boston Logan). It shows live aircraft positions on a map and lets you replay historical ATC recordings synced to real aircraft positions from the same time window.
 
-1. Live aircraft positions on a map (ADS-B data via OpenSky Network)
-2. Live ATC audio streaming (LiveATC.net public streams)
+**Stack:** React + Vite, Tailwind CSS, Mapbox GL JS, Node.js server, Azure OpenAI Whisper  
+**GitHub repo:** `flight-radar-atc`  
+**Primary airport:** KBOS — Boston Logan International
 
-This is a personal project — no App Store, no backend server, no subscription. It lives on your iPhone home screen as a Progressive Web App deployed to GitHub Pages.
+---
+
+## Why We Pivoted — Live ATC Streams Are Blocked
+
+The original plan was to stream live ATC audio directly from LiveATC.net, matching the experience of the paid ATC Live app. This turned out to be technically blocked:
+
+- **LiveATC.net** (`d.liveatc.net`) is protected by **Cloudflare bot detection** on both the live streams and archive pages. Every programmatic request — including server-side Cloudflare Worker proxies — receives a JavaScript challenge page instead of audio. The paid ATC app almost certainly has a commercial licensing deal with LiveATC; they are not using a public API.
+- **OpenSky Network** historical and live APIs are CORS-locked to `https://opensky-network.org`, making them unusable directly from a browser.
+
+Rather than fight infrastructure that's designed to block us, we pivoted to a **historical playback mode** that achieves a similar (and arguably more interesting) experience using data we can actually access.
+
+---
+
+## Current Approach — Historical Playback
+
+The user downloads a LiveATC archive recording manually in their browser (Cloudflare only challenges bots — human visits work fine), then uploads it to the app. The app:
+
+1. **Transcribes** the audio using Azure OpenAI Whisper, showing timestamped ATC callouts
+2. **Plays back** the audio with a timeline scrubber *(coming next)*
+3. **Syncs aircraft positions** on the map to the audio timeline using historical ADS-B data from OpenSky Trino *(coming next)*
+
+This gives a full replay experience — you pick a past moment at KBOS, hear the actual ATC audio, read the transcript, and watch the aircraft move in real time as they were that day.
+
+---
+
+## Architecture
+
+### Frontend (React + Vite)
+- `src/components/Map.jsx` — Mapbox dark map, live aircraft markers, dead reckoning
+- `src/components/TranscriptionPanel.jsx` — file upload, streams transcription segments
+- `src/components/TopBar.jsx` — airport label + aircraft count
+- `src/components/FlightCard.jsx` — click-to-select aircraft info card
+- `src/hooks/useAircraft.js` — polls airplanes.live every 10s for live positions
+
+### Local Server (Node.js — `server/transcribe.js`)
+Runs on port 3002 alongside the Vite dev server. Handles everything that requires server-side access:
+- Accepts MP3 upload from browser
+- Uses **ffmpeg** to split into 30-second mono 16kHz WAV chunks (with highpass filter, volume boost, silence removal to reduce Whisper hallucination on radio static)
+- Sends each chunk to **Azure OpenAI Whisper** with rate-limit retry (Azure S0 tier: ~3 calls/min)
+- Streams timestamped segments back to the browser as newline-delimited JSON (NDJSON)
+
+### Running the app
+```bash
+npm run dev     # Vite dev server → http://localhost:5173
+npm run server  # Transcription server → http://localhost:3002
+```
+
+---
 
 **GitHub repo:** `flight-radar-atc`  
 **Primary airport:** KBOS — Boston Logan International  

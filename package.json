@@ -5,12 +5,18 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "server": "node --env-file=.env server/transcribe.js",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "form-data": "^4.0.5",
     "mapbox-gl": "^3.21.0",
+    "multer": "^2.1.1",
+    "node-fetch": "^3.3.2",
     "react": "^19.2.4",
     "react-dom": "^19.2.4"
   },

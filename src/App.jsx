@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import Map from './components/Map'
 import TopBar from './components/TopBar'
-import AudioPlayer from './components/AudioPlayer'
+import TranscriptionPanel from './components/TranscriptionPanel'
 import FlightCard from './components/FlightCard'
 import { useAircraft } from './hooks/useAircraft'
 
@@ -18,7 +18,7 @@ export default function App() {
       />
       <TopBar aircraftCount={aircraft.length} />
       <FlightCard aircraft={selected} onClose={() => setSelected(null)} />
-      <AudioPlayer />
+      <TranscriptionPanel />
     </div>
   )
 }
